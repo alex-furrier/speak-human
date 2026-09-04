@@ -7,8 +7,8 @@ The V0 dogfood used real Pi 0.84.3 sessions with isolated session directories an
 Qwen3.5-4B Q4 ran through llama.cpp at a credential-free loopback address. Speak Human accepted a rewrite of deliberately repetitive prose.
 
 - Outcome: rewrite
-- Rewrite latency: 1,021 ms
-- Source and replacement sizes: 859 and 494 bytes
+- Rewrite latency: 906 ms
+- Source and replacement sizes: 859 and 475 bytes
 - Protocol and preservation checks: passed
 - Primary assistant metadata: preserved
 
@@ -19,9 +19,9 @@ The rewrite removed repetition, but retained synthetic phrases such as “critic
 The Pi adapter selected the explicitly configured `openai-codex/gpt-5.6-luna` model through `ctx.modelRegistry.complete()` without changing the active primary model. Speak Human accepted its rewrite of the same source.
 
 - Outcome: rewrite
-- Rewrite latency: 3,171 ms
-- Source and replacement sizes: 859 and 369 bytes
-- Secondary usage: 371 input tokens, 114 output tokens, and $0.000211
+- Rewrite latency: 4,506 ms
+- Source and replacement sizes: 859 and 356 bytes
+- Secondary usage: 357 input tokens, 95 output tokens, and $0.0001854
 - Protocol and preservation checks: passed
 - Primary assistant metadata and usage: preserved
 
@@ -37,7 +37,7 @@ The session files contained one assistant message for each completed turn. Custo
 
 ## Friction and remaining evidence
 
-The first Qwen trial failed because a single user message carrying JSON source encouraged the model to return `<NO_CHANGE>` followed by the source object. Splitting the contract into a system prompt and a bounded source message fixed the protocol behavior and matched the earlier Qwen experiment.
+The first Qwen trial failed because a single user message carrying a JSON source object encouraged the model to return `<NO_CHANGE>` followed by that object. Separating the system contract from the bounded source message fixed the protocol behavior. The final safety pass encoded the source as one JSON string inside that user message so delimiter-like source text cannot escape its data boundary. Both model routes accepted rewrites with that final prompt.
 
 A 50% minimum compression ratio rejected a useful Luna rewrite of highly repetitive prose. Lowering the bound to 30% admitted the candidate while retaining exact protected-content checks. This threshold remains a heuristic safety bound, not semantic proof.
 
