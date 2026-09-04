@@ -111,13 +111,28 @@ test("rewrite preserves original on protocol, abort, and preservation failures",
   );
   const aborted = new AbortController();
   aborted.abort();
+  let invoked = false;
   assert.deepEqual(
     await rewrite(
       source,
       async () => {
-        throw new Error("cancelled");
+        invoked = true;
+        return { text: `<REWRITE>\n${source}` };
       },
       aborted.signal,
+    ),
+    { status: "rejected", reason: "aborted" },
+  );
+  assert.equal(invoked, false);
+  const lateAbort = new AbortController();
+  assert.deepEqual(
+    await rewrite(
+      source,
+      async () => {
+        lateAbort.abort();
+        return { text: `<REWRITE>\n${source}` };
+      },
+      lateAbort.signal,
     ),
     { status: "rejected", reason: "aborted" },
   );

@@ -229,6 +229,7 @@ export async function rewrite(
 ): Promise<RewriteOutcome> {
   if (Buffer.byteLength(source) > MAX_SOURCE_BYTES)
     return { status: "rejected", reason: "source-too-large" };
+  if (signal.aborted) return { status: "rejected", reason: "aborted" };
   let completion: CompletionResult;
   try {
     completion = await complete(buildPrompt(source), signal);
@@ -238,6 +239,7 @@ export async function rewrite(
       reason: signal.aborted ? "aborted" : "backend-failed",
     };
   }
+  if (signal.aborted) return { status: "rejected", reason: "aborted" };
   if (Buffer.byteLength(completion.text) > MAX_COMPLETION_BYTES)
     return { status: "rejected", reason: "completion-too-large" };
   const parsed = parseCompletion(completion.text);

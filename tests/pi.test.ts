@@ -60,6 +60,8 @@ type ContextControls = {
   authenticated?: boolean;
   completionText?: string;
   pending?: boolean;
+  signal?: AbortSignal;
+  onComplete?: () => void;
 };
 
 function createContext(controls: ContextControls = {}): {
@@ -75,7 +77,7 @@ function createContext(controls: ContextControls = {}): {
   const model = { provider: "p", id: "m" };
   let release: (() => void) | undefined;
   const partial = {
-    signal: undefined,
+    signal: controls.signal,
     ui: {
       setStatus(_key: string, value?: string) {
         statuses.push(value);
@@ -107,6 +109,7 @@ function createContext(controls: ContextControls = {}): {
             );
           });
         }
+        controls.onComplete?.();
         return {
           stopReason: "stop",
           provider: "p",
@@ -292,6 +295,24 @@ test("Pi adapter restores active-branch state on start and tree navigation", asy
   await harness.handlers.get("session_tree")!({}, runtime.context);
   await harness.commands.get("speak-human")!.handler("status", runtime.context);
   assert.match(runtime.notifications.at(-1) ?? "", /enabled=true/);
+});
+
+test("context cancellation after a cooperative completion prevents replacement", async () => {
+  const harness = createHarness();
+  createSpeakHuman(nativeConfig)(harness.api);
+  const controller = new AbortController();
+  const runtime = createContext({
+    signal: controller.signal,
+    onComplete: () => controller.abort(),
+  });
+  await harness.commands.get("speak-human")!.handler("on", runtime.context);
+  const result = await harness.handlers.get("message_end")!(
+    { message: assistantMessage() },
+    runtime.context,
+  );
+  assert.equal(result, undefined);
+  assert.equal(harness.entries.at(-1)?.data.outcome, "rejected");
+  assert.equal(harness.entries.at(-1)?.data.code, "aborted");
 });
 
 test("session navigation aborts pending rewrite and prevents late replacement", async () => {

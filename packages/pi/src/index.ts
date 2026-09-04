@@ -374,8 +374,11 @@ export function createSpeakHuman(
             : config.backend.kind === "command"
               ? commandCompletion(config.backend.config)
               : nativeCompletion(context, config.backend);
-        const outcome = await rewrite(source, completion, operation.signal);
+        const completed = await rewrite(source, completion, operation.signal);
         if (controller.signal.aborted) return;
+        const outcome = operation.signal.aborted
+          ? ({ status: "rejected", reason: "aborted", checks: [] } as const)
+          : completed;
         previous = `${outcome.status}:${Date.now() - started}ms`;
         pi.appendEntry(TELEMETRY, {
           outcome: outcome.status,
@@ -408,12 +411,7 @@ export function createSpeakHuman(
           word_bucket: bucket(source.trim().split(/\s+/).length),
           byte_bucket: bucket(Buffer.byteLength(source)),
         });
-        if (
-          outcome.status !== "rewrite" ||
-          controller.signal.aborted ||
-          !message
-        )
-          return;
+        if (outcome.status !== "rewrite" || operation.signal.aborted) return;
         original = source;
         const content = [...message.content];
         content[block.index] = {
