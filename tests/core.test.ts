@@ -45,6 +45,13 @@ test("preservation retains destinations while labels may change", () => {
       "numbers",
     ),
   );
+  for (const [before, after] of [
+    ["limit is -1", "limit is 1"],
+    ["offset is +2.5", "offset is -2.5"],
+    ["threshold is 1e-3", "threshold is 1e3"],
+    ["mask is 0xFF", "mask is 0x0F"],
+  ] as const)
+    assert.ok(preservationFailures(before, after).includes("numbers"));
   assert.ok(
     preservationFailures(
       "before\n```ts\nx()\n```\nafter",

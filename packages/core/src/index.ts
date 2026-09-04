@@ -193,10 +193,13 @@ export function preservationFailures(
     [
       "numbers",
       (text) =>
-        matches(text, /(?:\d+\.)+\d+(?:[-+][\w.]+)?|\b\d+(?:\.\d+)?\b/g),
+        matches(
+          text,
+          /(?<![\p{L}\p{N}_])[-+]?(?:0[xX][\dA-Fa-f]+|0[bB][01]+|0[oO][0-7]+|(?:\d+\.)+\d+(?:[-+][\w.]+)?|(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)(?![\p{L}\p{N}_])/gu,
+        ),
     ],
     ["paths", (text) => matches(text, /(?:~\/|\/)[\w./-]+/g)],
-    ["flags", (text) => matches(text, /--?[\w-]+/g)],
+    ["flags", (text) => matches(text, /--?[A-Za-z][\w-]*/g)],
     [
       "commands",
       (text) => matches(text, /\b(?:npm|npx|git|node|mise)\s+[\w./:-]+/g),
