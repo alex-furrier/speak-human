@@ -276,6 +276,9 @@ export function commandCompletion(config: CommandConfig): Completion {
             finish(new Error("command-overflow"));
         });
         child.on("error", () => finish(new Error("command-failed")));
+        child.stdin.on("error", () =>
+          finish(new Error("command-stdin-failed")),
+        );
         child.on("close", (code) => {
           if (settled) return;
           if (code !== 0) return finish(new Error("command-failed"));

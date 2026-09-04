@@ -380,6 +380,10 @@ export function createSpeakHuman(
           ? ({ status: "rejected", reason: "aborted", checks: [] } as const)
           : completed;
         previous = `${outcome.status}:${Date.now() - started}ms`;
+        const rewriteRoute =
+          outcome.status === "rejected"
+            ? undefined
+            : telemetryCompletionRoute(config.backend, outcome.completion);
         pi.appendEntry(TELEMETRY, {
           outcome: outcome.status,
           code: "reason" in outcome ? outcome.reason : "ok",
@@ -391,10 +395,10 @@ export function createSpeakHuman(
                 : [],
           backend: config.backend.kind,
           route: route(config.backend),
-          ...(outcome.status !== "rejected" && outcome.completion.route
+          ...(rewriteRoute
             ? {
-                rewrite_route_provider: outcome.completion.route.provider,
-                rewrite_route_model: outcome.completion.route.model,
+                rewrite_route_provider: rewriteRoute.provider,
+                rewrite_route_model: rewriteRoute.model,
               }
             : {}),
           ...(outcome.status !== "rejected" && outcome.completion.usage
@@ -443,6 +447,16 @@ export function createSpeakHuman(
       }
     });
   };
+}
+function telemetryCompletionRoute(
+  backend: Backend,
+  completion: CompletionResult,
+): NonNullable<CompletionResult["route"]> | undefined {
+  if (backend.kind === "loopback")
+    return { provider: "loopback", model: backend.config.model };
+  if (backend.kind === "command")
+    return { provider: "command", model: "configured-command" };
+  return completion.route;
 }
 function route(backend: Backend | undefined): string {
   if (!backend) return "none";

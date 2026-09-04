@@ -3,6 +3,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -15,6 +16,9 @@ import {
   type Config,
 } from "@speak-human/pi";
 
+const fake = fileURLToPath(
+  new URL("../fixtures/fake-backend.mjs", import.meta.url),
+);
 const prose =
   "This is a long enough assistant response with at least forty plain words so it can enter the rewrite path without ambiguity. It preserves a warning, a command, and a practical next step that the reader can use after this response has completed in the terminal without changing any primary assistant metadata or usage values.";
 
@@ -264,6 +268,37 @@ test("Pi native completion handles unscoped models and preserves primary metadat
   assert.deepEqual(telemetry?.data.checks, []);
   assert.equal(JSON.stringify(telemetry).includes(prose), false);
   assert.match(String(telemetry?.data.source_sha256), /^[a-f0-9]{64}$/);
+});
+
+test("Pi telemetry ignores untrusted backend route metadata", async () => {
+  const harness = createHarness();
+  createSpeakHuman({
+    schemaVersion: 1,
+    backend: {
+      kind: "command",
+      config: {
+        executable: process.execPath,
+        args: [fake, "private-route"],
+        timeoutMs: 1_000,
+        allowRemoteSource: true,
+      },
+    },
+  })(harness.api);
+  const runtime = createContext();
+  await harness.commands.get("speak-human")!.handler("on", runtime.context);
+  await harness.handlers.get("message_end")!(
+    { message: assistantMessage() },
+    runtime.context,
+  );
+  const telemetry = harness.entries.find(
+    (entry) => entry.type === "speak-human-telemetry-v1",
+  );
+  assert.equal(telemetry?.data.rewrite_route_provider, "command");
+  assert.equal(telemetry?.data.rewrite_route_model, "configured-command");
+  assert.equal(
+    JSON.stringify(telemetry).includes("private response prose"),
+    false,
+  );
 });
 
 test("Pi adapter restores active-branch state on start and tree navigation", async () => {

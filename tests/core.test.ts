@@ -52,6 +52,20 @@ test("preservation retains destinations while labels may change", () => {
     ["mask is 0xFF", "mask is 0x0F"],
   ] as const)
     assert.ok(preservationFailures(before, after).includes("numbers"));
+  for (const [before, after] of [
+    ["edit src/a.ts", "edit lib/a.ts"],
+    [String.raw`edit C:\src\a.ts`, String.raw`edit C:\lib\a.ts`],
+    ["edit ../src/a.ts", "edit ./src/a.ts"],
+  ] as const)
+    assert.ok(preservationFailures(before, after).includes("paths"));
+  for (const [before, after] of [
+    [
+      "Run npm run check before release.",
+      "Run npm run publish before release.",
+    ],
+    ["Execute acme deploy --safe now.", "Execute acme destroy --safe now."],
+  ] as const)
+    assert.ok(preservationFailures(before, after).includes("commands"));
   assert.ok(
     preservationFailures(
       "before\n```ts\nx()\n```\nafter",

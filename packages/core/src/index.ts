@@ -180,6 +180,31 @@ function inlineCode(text: string): string[] {
 function linkDestinations(text: string): string[] {
   return Array.from(text.matchAll(/\]\(([^)]+)\)/g), (match) => match[1]!);
 }
+function paths(text: string): string[] {
+  return matches(
+    text,
+    /(?<![\w.-])(?:[A-Za-z]:\\(?:[\w .-]+\\)*[\w .-]+|\\\\[\w .-]+\\[\w .\\-]+|~?\/[\w./-]+|(?:\.\.?\/)+(?:[\w.-]+\/)*[\w.-]+|(?:[\w.-]+\/)+[\w.-]+)(?![\w.-])/g,
+  );
+}
+function commandInvocations(text: string): string[] {
+  const commands = matches(
+    text,
+    /\b(?:npm|npx|pnpm|yarn|bun|node|deno|python3?|uv|git|gh|mise|cargo|go|rustc|make|docker|kubectl|curl|wget|pi)\s+[^\n]+/g,
+  );
+  commands.push(
+    ...Array.from(
+      text.matchAll(/^[ \t]*[$>]\s+([^\n]+)/gm),
+      (match) => match[1]!,
+    ),
+    ...Array.from(
+      text.matchAll(
+        /\b(?:run|execute|invoke|type)\s+(?:the\s+command\s+)?((?:\.{0,2}\/|~\/|\/)?[A-Za-z0-9_.-]+(?:\s+[^\n]+)?)/gi,
+      ),
+      (match) => match[1]!,
+    ),
+  );
+  return commands;
+}
 export function preservationFailures(
   source: string,
   candidate: string,
@@ -198,12 +223,9 @@ export function preservationFailures(
           /(?<![\p{L}\p{N}_])[-+]?(?:0[xX][\dA-Fa-f]+|0[bB][01]+|0[oO][0-7]+|(?:\d+\.)+\d+(?:[-+][\w.]+)?|(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)(?![\p{L}\p{N}_])/gu,
         ),
     ],
-    ["paths", (text) => matches(text, /(?:~\/|\/)[\w./-]+/g)],
+    ["paths", paths],
     ["flags", (text) => matches(text, /--?[A-Za-z][\w-]*/g)],
-    [
-      "commands",
-      (text) => matches(text, /\b(?:npm|npx|git|node|mise)\s+[\w./:-]+/g),
-    ],
+    ["commands", commandInvocations],
   ];
   for (const [name, extract] of required)
     if (!sameMultiset(extract(source), extract(candidate))) failures.push(name);

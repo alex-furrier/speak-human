@@ -10,4 +10,4 @@ Configuration is JSON with `schemaVersion: 1`, read from `~/.config/speak-human/
 
 Loopback responses must contain exactly one choice whose message has string `content`. Optional `model` must be a nonempty string, and recognized token counts must be nonnegative finite numbers. Speak Human ignores other OpenAI-compatible response metadata. The V0 command backend supports Unix-like systems. Command responses use Speak Human's own strict protocol and reject unknown fields. Optional route provider/model values must be nonempty, and optional usage values must be nonnegative finite numbers.
 
-Telemetry contains hashes, buckets, route, backend, outcome, checks, latency, and available secondary usage only. It never contains source or candidate prose and uses custom entries.
+Telemetry contains hashes, buckets, trusted configured or Pi-registry route identifiers, backend, outcome, checks, latency, and available secondary usage only. It never persists backend-returned route labels, source prose, or candidate prose and uses custom entries.

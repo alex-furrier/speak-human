@@ -35,21 +35,26 @@ function fail(): void {
   process.exitCode = 1;
 }
 
-let input = "";
+let input: Buffer[] = [];
+let inputBytes = 0;
 let oversized = false;
-process.stdin.setEncoding("utf8");
-process.stdin.on("data", (chunk: string) => {
+process.stdin.on("data", (chunk: Buffer) => {
   if (oversized) return;
-  input += chunk;
-  if (Buffer.byteLength(input) > INPUT_LIMIT) {
+  inputBytes += chunk.length;
+  if (inputBytes > INPUT_LIMIT) {
     oversized = true;
-    input = "";
+    input = [];
+    return;
   }
+  input.push(chunk);
 });
 process.stdin.on("end", async () => {
   try {
     if (oversized) throw new Error("request-too-large");
-    const request: unknown = JSON.parse(input);
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(
+      Buffer.concat(input),
+    );
+    const request: unknown = JSON.parse(decoded);
     if (!request || typeof request !== "object")
       throw new Error("request-invalid");
     const body = request as Record<string, unknown>;

@@ -32,7 +32,9 @@ async function runCli(
   child.stdout.on("data", (chunk) => (stdout += chunk));
   child.stderr.on("data", (chunk) => (stderr += chunk));
   child.stdin.end(
-    typeof request === "string" ? request : JSON.stringify(request),
+    typeof request === "string" || Buffer.isBuffer(request)
+      ? request
+      : JSON.stringify(request),
   );
   const code = await new Promise<number | null>((resolve) =>
     child.once("close", resolve),
@@ -64,8 +66,14 @@ test("CLI rewrite and doctor use bounded versioned JSON", async () => {
 });
 
 test("CLI rejects malformed, unknown, and oversized input without echoing it", async () => {
+  const malformedUtf8 = Buffer.concat([
+    Buffer.from('{"schema_version":1,"text":"'),
+    Buffer.from([0xff]),
+    Buffer.from(`","backend":${JSON.stringify(backend)}}`),
+  ]);
   for (const request of [
     "{",
+    malformedUtf8,
     { schema_version: 1, text: "secret", backend, extra: true },
     "x".repeat(65 * 1024),
   ]) {

@@ -21,6 +21,20 @@ if (mode === "marker") {
       usage: { input: -1 },
     }),
   );
+} else if (mode === "private-route") {
+  process.stdout.write(
+    JSON.stringify({
+      schema_version: 1,
+      completion: "<NO_CHANGE>",
+      route: {
+        provider: "private response prose",
+        model: "private response prose",
+      },
+    }),
+  );
+} else if (mode === "close-stdin") {
+  process.stdin.destroy();
+  setTimeout(() => {}, 1000);
 } else if (mode === "timeout") {
   setInterval(() => {}, 1000);
 } else if (mode === "child") {
