@@ -178,12 +178,30 @@ function inlineCode(text: string): string[] {
   return spans;
 }
 function linkDestinations(text: string): string[] {
-  return Array.from(text.matchAll(/\]\(([^)]+)\)/g), (match) => match[1]!);
+  const destinations = Array.from(
+    text.matchAll(/\]\(([^)]+)\)/g),
+    (match) => match[1]!,
+  );
+  destinations.push(
+    ...Array.from(
+      text.matchAll(/^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*(?:<([^>\n]+)>|(\S+))/gm),
+      (match) => match[1] ?? match[2]!,
+    ),
+    ...Array.from(
+      text.matchAll(/\b(?:href|src)\s*=\s*(["'])(.*?)\1/gi),
+      (match) => match[2]!,
+    ),
+    ...Array.from(
+      text.matchAll(/!?\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g),
+      (match) => match[1]!,
+    ),
+  );
+  return destinations;
 }
 function paths(text: string): string[] {
   return matches(
     text,
-    /(?<![\w.-])(?:[A-Za-z]:\\(?:[\w .-]+\\)*[\w .-]+|\\\\[\w .-]+\\[\w .\\-]+|~?\/[\w./-]+|(?:\.\.?\/)+(?:[\w.-]+\/)*[\w.-]+|(?:[\w.-]+\/)+[\w.-]+)(?![\w.-])/g,
+    /(?<![\w.-])(?:[A-Za-z]:\\(?:[\w .-]+\\)*[\w .-]+|\\\\[\w .-]+\\[\w .\\-]+|~?\/[\w./-]+|(?:\.\.?\/)+(?:[\w.-]+\/)*[\w.-]+|(?:[\w.-]+\/)+[\w.-]+|[\w.-]+\.[A-Za-z0-9]{1,10}|\.[A-Za-z][\w-]*)(?![\w.-])/g,
   );
 }
 function commandInvocations(text: string): string[] {

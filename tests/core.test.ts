@@ -40,6 +40,14 @@ test("preservation retains destinations while labels may change", () => {
       source.replace("https://example.test/link", "https://other.test/link"),
     ).includes("urls"),
   );
+  for (const [before, after] of [
+    ["[guide][doc]\n\n[doc]: guide.md", "[guide][doc]\n\n[doc]: other.md"],
+    ['<a href="guide.md">guide</a>', '<a href="other.md">guide</a>'],
+    ["[[Guide|read this]]", "[[Other Guide|read this]]"],
+  ] as const)
+    assert.ok(
+      preservationFailures(before, after).includes("link-destinations"),
+    );
   assert.ok(
     preservationFailures(source, source.replace("1.2.3", "2.0")).includes(
       "numbers",
@@ -56,6 +64,8 @@ test("preservation retains destinations while labels may change", () => {
     ["edit src/a.ts", "edit lib/a.ts"],
     [String.raw`edit C:\src\a.ts`, String.raw`edit C:\lib\a.ts`],
     ["edit ../src/a.ts", "edit ./src/a.ts"],
+    ["edit README.md", "edit README.txt"],
+    ["load .env", "load .npmrc"],
   ] as const)
     assert.ok(preservationFailures(before, after).includes("paths"));
   for (const [before, after] of [
