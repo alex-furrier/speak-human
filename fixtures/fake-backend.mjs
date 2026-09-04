@@ -1,6 +1,8 @@
+import { spawn } from "node:child_process";
+import { readdirSync, writeFileSync } from "node:fs";
+
 const mode = process.argv[2];
 if (mode === "marker") {
-  const { writeFileSync } = await import("node:fs");
   writeFileSync(process.env.MARKER_FILE, "spawned");
 } else if (mode === "invalid") {
   process.stdout.write(
@@ -22,8 +24,6 @@ if (mode === "marker") {
 } else if (mode === "timeout") {
   setInterval(() => {}, 1000);
 } else if (mode === "child") {
-  const { spawn } = await import("node:child_process");
-  const { writeFileSync } = await import("node:fs");
   const child = spawn(process.execPath, ["-e", "setInterval(()=>{},1000)"], {
     stdio: "ignore",
   });
@@ -50,7 +50,6 @@ if (mode === "marker") {
     ),
   );
 } else if (mode === "inspect") {
-  const { readdirSync } = await import("node:fs");
   let input = "";
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", (chunk) => (input += chunk));

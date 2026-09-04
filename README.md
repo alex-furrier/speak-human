@@ -39,7 +39,18 @@ Create `~/.config/speak-human/config.json`, or set `SPEAK_HUMAN_CONFIG_PATH` to 
 
 Run `/speak-human doctor` first. It validates configuration and route availability without sending source text. Then use `/speak-human on` and `/speak-human status`. Status reports the enabled state, backend, safe route, disclosure boundary, timeout, and prior outcome. `/speak-human show-original` exposes only the latest in-memory original and clears on lifecycle changes.
 
-Loopback is credential-free local HTTP only. Command and Pi-native backends require `allowRemoteSource: true` because the route may be remote. Pi-native selection uses only the explicit ordered model list, session scope, availability, and configured auth. It never changes the active model.
+Loopback is credential-free local HTTP only. The V0 command backend supports Unix-like systems. Command and Pi-native backends require `allowRemoteSource: true` because the route may be remote. Pi-native selection uses only the explicit ordered model list, session scope, availability, and configured auth. It never changes the active model.
+
+## Use the portable CLI
+
+The installed package also provides a bounded JSON command-line interface for wrappers and future harness adapters:
+
+```sh
+printf '%s' '{"schema_version":1,"backend":{"kind":"loopback","config":{"url":"http://127.0.0.1:8080","model":"local-model"}}}' \
+  | speak-human doctor
+```
+
+`doctor` validates the backend without sending source. `rewrite` accepts the same envelope plus a `text` field. See [the command-line protocol](docs/cli.md) for the complete request and response shapes.
 
 ## Development
 
@@ -53,10 +64,10 @@ npm run verify
 
 ## Support
 
-| Runtime     | Status                                                                |
-| ----------- | --------------------------------------------------------------------- |
-| Pi 0.84.3   | Supported package target. Deterministic lifecycle behavior is tested. |
-| Claude Code | Display probe only. Canonical replacement is unverified.              |
-| Codex       | No native replacement support.                                        |
+| Runtime             | Status                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| Pi 0.84.3           | Supported package target. Deterministic lifecycle behavior is tested.                             |
+| Claude Code 2.1.211 | Experimental display transformation is verified. Canonical transcript replacement is unsupported. |
+| Codex               | No native replacement support.                                                                    |
 
-Read [SPEC.md](SPEC.md) for the protocol and privacy boundary. Exact preservation checks are not semantic or factual proof. Real Pi terminal user interface (TUI) persistence and real-provider dogfood remain manual validation.
+Read [SPEC.md](SPEC.md) for the protocol and privacy boundary. Exact preservation checks are not semantic or factual proof. Real Pi terminal user interface (TUI) presentation remains manual validation. See [dogfood results](docs/dogfood.md) for real Qwen and Luna replacement evidence. Deeper references cover the [architecture](docs/architecture.md), [CLI](docs/cli.md), [command-adapter protocol](docs/command-adapter-protocol.md), [security boundary](docs/security.md), and [Claude display probe](docs/claude-display-probe.md).

@@ -192,6 +192,14 @@ test("strict config accepts only complete backend-specific schema v1 shapes", ()
     },
     {
       schemaVersion: 1,
+      enabledByDefault: true,
+      backend: {
+        kind: "loopback",
+        config: { url: "https://example.com", model: "m" },
+      },
+    },
+    {
+      schemaVersion: 1,
       backend: {
         kind: "command",
         config: { executable: "echo", allowRemoteSource: true },
@@ -250,6 +258,7 @@ test("Pi native completion handles unscoped models and preserves primary metadat
   assert.equal(telemetry?.data.rewrite_usage_input, 7);
   assert.equal(telemetry?.data.rewrite_usage_output, 5);
   assert.equal(telemetry?.data.rewrite_usage_cost, 0.002);
+  assert.deepEqual(telemetry?.data.checks, []);
   assert.equal(JSON.stringify(telemetry).includes(prose), false);
   assert.match(String(telemetry?.data.source_sha256), /^[a-f0-9]{64}$/);
 });

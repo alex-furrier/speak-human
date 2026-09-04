@@ -23,6 +23,7 @@ type NativeModel = ExtensionContext["scopedModels"][number]["model"];
 import {
   commandCompletion,
   loopbackCompletion,
+  validateLoopbackUrl,
   type CommandConfig,
   type LoopbackConfig,
 } from "@speak-human/cli";
@@ -101,14 +102,20 @@ export function isConfig(value: unknown): value is Config {
     )
       return false;
     const item = backend.config as Record<string, unknown>;
-    return (
-      hasOnly(item, ["url", "model", "timeoutMs"]) &&
-      typeof item.url === "string" &&
-      item.url.length > 0 &&
-      typeof item.model === "string" &&
-      item.model.trim().length > 0 &&
-      validTimeout(item.timeoutMs)
-    );
+    if (
+      !hasOnly(item, ["url", "model", "timeoutMs"]) ||
+      typeof item.url !== "string" ||
+      typeof item.model !== "string" ||
+      item.model.trim().length === 0 ||
+      !validTimeout(item.timeoutMs)
+    )
+      return false;
+    try {
+      validateLoopbackUrl(item.url);
+      return true;
+    } catch {
+      return false;
+    }
   }
   if (backend.kind === "command") {
     if (
@@ -216,11 +223,11 @@ function nativeCompletion(
       const result = await context.modelRegistry.complete(
         model,
         {
-          systemPrompt: "",
+          systemPrompt: prompt.system,
           messages: [
             {
               role: "user",
-              content: [{ type: "text", text: prompt }],
+              content: [{ type: "text", text: prompt.user }],
               timestamp: Date.now(),
             },
           ],
@@ -373,6 +380,12 @@ export function createSpeakHuman(
         pi.appendEntry(TELEMETRY, {
           outcome: outcome.status,
           code: "reason" in outcome ? outcome.reason : "ok",
+          checks:
+            outcome.status === "rewrite"
+              ? outcome.checks
+              : outcome.status === "rejected"
+                ? (outcome.checks ?? [])
+                : [],
           backend: config.backend.kind,
           route: route(config.backend),
           ...(outcome.status !== "rejected" && outcome.completion.route
@@ -415,6 +428,7 @@ export function createSpeakHuman(
           pi.appendEntry(TELEMETRY, {
             outcome: "rejected",
             code: "backend-unavailable",
+            checks: [],
             backend: config.backend.kind,
             route: route(config.backend),
             elapsed_ms: Date.now() - started,

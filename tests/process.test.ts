@@ -15,6 +15,7 @@ import {
 const fake = fileURLToPath(
   new URL("../fixtures/fake-backend.mjs", import.meta.url),
 );
+const prompt = { system: "system contract", user: "private prompt" };
 const run = (mode: string, extras: Partial<CommandConfig> = {}) =>
   commandCompletion({
     executable: process.execPath,
@@ -22,7 +23,7 @@ const run = (mode: string, extras: Partial<CommandConfig> = {}) =>
     timeoutMs: mode === "timeout" ? 150 : 1500,
     allowRemoteSource: true,
     ...extras,
-  })("private prompt", new AbortController().signal);
+  })(prompt, new AbortController().signal);
 async function withServer(
   handler: RequestListener,
   runTest: (config: LoopbackConfig) => Promise<void>,
@@ -77,7 +78,7 @@ test("command backend validates config and does not spawn for an aborted signal"
     commandCompletion({
       executable: "/definitely/missing/speak-human-backend",
       allowRemoteSource: true,
-    })("private prompt", new AbortController().signal),
+    })(prompt, new AbortController().signal),
   );
   const directory = await mkdtemp(join(tmpdir(), "speak-human-marker-"));
   const marker = join(directory, "marker");
@@ -90,7 +91,7 @@ test("command backend validates config and does not spawn for an aborted signal"
       args: [fake, "marker"],
       env: ["MARKER_FILE"],
       allowRemoteSource: true,
-    })("private prompt", controller.signal),
+    })(prompt, controller.signal),
   );
   await assert.rejects(access(marker));
 });
@@ -125,10 +126,7 @@ test("loopback backend accepts exact success metadata and rejects transport fail
     },
     async (config) => {
       assert.deepEqual(
-        await loopbackCompletion(config)(
-          "private prompt",
-          new AbortController().signal,
-        ),
+        await loopbackCompletion(config)(prompt, new AbortController().signal),
         {
           text: "<NO_CHANGE>",
           route: { provider: "loopback", model: "local" },
@@ -154,12 +152,8 @@ test("loopback backend accepts exact success metadata and rejects transport fail
       ),
     async (config) =>
       assert.equal(
-        (
-          await loopbackCompletion(config)(
-            "private prompt",
-            new AbortController().signal,
-          )
-        ).text,
+        (await loopbackCompletion(config)(prompt, new AbortController().signal))
+          .text,
         "<NO_CHANGE>",
       ),
   );
@@ -175,12 +169,20 @@ test("loopback backend accepts exact success metadata and rejects transport fail
       (_request, response) => response.end(body),
       async (config) =>
         assert.rejects(
-          loopbackCompletion(config)(
-            "private prompt",
-            new AbortController().signal,
-          ),
+          loopbackCompletion(config)(prompt, new AbortController().signal),
         ),
     );
+  await withServer(
+    (_request, response) => {
+      response.statusCode = 307;
+      response.setHeader("location", "https://example.com/collect");
+      response.end();
+    },
+    async (config) =>
+      assert.rejects(
+        loopbackCompletion(config)(prompt, new AbortController().signal),
+      ),
+  );
   await withServer(
     (_request, response) => {
       response.statusCode = 500;
@@ -188,30 +190,21 @@ test("loopback backend accepts exact success metadata and rejects transport fail
     },
     async (config) =>
       assert.rejects(
-        loopbackCompletion(config)(
-          "private prompt",
-          new AbortController().signal,
-        ),
+        loopbackCompletion(config)(prompt, new AbortController().signal),
       ),
   );
   await withServer(
     (_request, response) => setTimeout(() => response.end("{}"), 200),
     async (config) =>
       assert.rejects(
-        loopbackCompletion(config)(
-          "private prompt",
-          new AbortController().signal,
-        ),
+        loopbackCompletion(config)(prompt, new AbortController().signal),
       ),
   );
   await withServer(
     (_request, response) => response.end("x".repeat(33 * 1024)),
     async (config) =>
       assert.rejects(
-        loopbackCompletion(config)(
-          "private prompt",
-          new AbortController().signal,
-        ),
+        loopbackCompletion(config)(prompt, new AbortController().signal),
       ),
   );
 });
@@ -226,7 +219,7 @@ test("loopback backend does not fetch for an aborted signal", async () => {
       const controller = new AbortController();
       controller.abort();
       await assert.rejects(
-        loopbackCompletion(config)("private prompt", controller.signal),
+        loopbackCompletion(config)(prompt, controller.signal),
       );
     },
   );

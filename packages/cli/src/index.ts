@@ -48,14 +48,30 @@ function timeoutSignal(
     },
   };
 }
-export function loopbackCompletion(config: LoopbackConfig): Completion {
-  const url = validateLoopbackUrl(config.url);
+export function isLoopbackConfig(value: unknown): value is LoopbackConfig {
+  if (!value || typeof value !== "object") return false;
+  const config = value as Record<string, unknown>;
   if (
-    !config.model ||
-    !Number.isSafeInteger(config.timeoutMs ?? 10_000) ||
-    (config.timeoutMs ?? 10_000) < 1
+    !hasOnly(config, ["url", "model", "timeoutMs"]) ||
+    typeof config.url !== "string" ||
+    typeof config.model !== "string" ||
+    !config.model.trim() ||
+    (config.timeoutMs !== undefined &&
+      (typeof config.timeoutMs !== "number" ||
+        !Number.isSafeInteger(config.timeoutMs) ||
+        config.timeoutMs < 1))
   )
-    throw new Error("loopback-config-invalid");
+    return false;
+  try {
+    validateLoopbackUrl(config.url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+export function loopbackCompletion(config: LoopbackConfig): Completion {
+  if (!isLoopbackConfig(config)) throw new Error("loopback-config-invalid");
+  const url = validateLoopbackUrl(config.url);
   return async (prompt, signal) => {
     if (signal.aborted) throw new Error("loopback-aborted");
     const operation = timeoutSignal(signal, config.timeoutMs ?? 10_000);
@@ -63,11 +79,15 @@ export function loopbackCompletion(config: LoopbackConfig): Completion {
       if (operation.signal.aborted) throw new Error("loopback-aborted");
       const response = await fetch(new URL("/v1/chat/completions", url), {
         method: "POST",
+        redirect: "error",
         signal: operation.signal,
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           model: config.model,
-          messages: [{ role: "user", content: prompt }],
+          messages: [
+            { role: "system", content: prompt.system },
+            { role: "user", content: prompt.user },
+          ],
           temperature: 0,
           max_tokens: 2048,
         }),
@@ -166,20 +186,41 @@ function validUsage(value: unknown, keys: readonly string[]): boolean {
     )
   );
 }
-function validCommandConfig(config: CommandConfig): boolean {
+export function isCommandConfig(value: unknown): value is CommandConfig {
+  if (!value || typeof value !== "object") return false;
+  const config = value as Record<string, unknown>;
   return (
+    hasOnly(config, [
+      "executable",
+      "args",
+      "env",
+      "timeoutMs",
+      "allowRemoteSource",
+    ]) &&
     config.allowRemoteSource === true &&
+    typeof config.executable === "string" &&
     config.executable.startsWith("/") &&
-    (config.args ?? []).every(
-      (item) => typeof item === "string" && !item.includes("\0"),
-    ) &&
-    (config.env ?? []).every((name) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) &&
-    Number.isSafeInteger(config.timeoutMs ?? 10_000) &&
-    (config.timeoutMs ?? 10_000) > 0
+    (config.args === undefined ||
+      (Array.isArray(config.args) &&
+        config.args.every(
+          (item) => typeof item === "string" && !item.includes("\0"),
+        ))) &&
+    (config.env === undefined ||
+      (Array.isArray(config.env) &&
+        config.env.every(
+          (name) =>
+            typeof name === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(name),
+        ))) &&
+    (config.timeoutMs === undefined ||
+      (typeof config.timeoutMs === "number" &&
+        Number.isSafeInteger(config.timeoutMs) &&
+        config.timeoutMs > 0))
   );
 }
 export function commandCompletion(config: CommandConfig): Completion {
-  if (!validCommandConfig(config)) throw new Error("command-config-invalid");
+  if (process.platform === "win32")
+    throw new Error("command-platform-unsupported");
+  if (!isCommandConfig(config)) throw new Error("command-config-invalid");
   return async (prompt, signal) => {
     if (signal.aborted) throw new Error("command-aborted");
     const cwd = await mkdtemp(join(tmpdir(), "speak-human-"));
@@ -205,9 +246,7 @@ export function commandCompletion(config: CommandConfig): Completion {
         const terminate = async (): Promise<void> => {
           const alreadyClosed = child.exitCode !== null;
           try {
-            if (process.platform !== "win32")
-              process.kill(-child.pid!, "SIGKILL");
-            else if (!alreadyClosed) child.kill("SIGKILL");
+            process.kill(-child.pid!, "SIGKILL");
           } catch {
             /* process group already exited */
           }
@@ -255,7 +294,12 @@ export function commandCompletion(config: CommandConfig): Completion {
             finish(new Error("command-invalid"));
           }
         });
-        child.stdin.end(JSON.stringify({ schema_version: 1, prompt }));
+        child.stdin.end(
+          JSON.stringify({
+            schema_version: 1,
+            prompt: `${prompt.system}\n\n${prompt.user}`,
+          }),
+        );
       });
     } finally {
       await rm(cwd, { recursive: true, force: true });

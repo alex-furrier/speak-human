@@ -104,12 +104,35 @@ try {
   checked("npm", ["install", "--omit=dev", "--ignore-scripts"], {
     cwd: extracted,
   });
+  const cliOutput = checked(
+    join(extracted, "node_modules", ".bin", "speak-human"),
+    ["doctor"],
+    {
+      cwd: extracted,
+      input: JSON.stringify({
+        schema_version: 1,
+        backend: {
+          kind: "command",
+          config: {
+            executable: "/bin/echo",
+            allowRemoteSource: true,
+          },
+        },
+      }),
+    },
+  );
+  const cliResult = JSON.parse(cliOutput);
+  if (cliResult.status !== "ok" || cliResult.backend !== "command") {
+    throw new Error("packed CLI doctor failed");
+  }
 
   for (const path of [
     "README.md",
     "SPEC.md",
     "docs/architecture.md",
+    "docs/cli.md",
     "docs/command-adapter-protocol.md",
+    "docs/dogfood.md",
     "docs/security.md",
     "extensions/speak-human.ts",
   ]) {

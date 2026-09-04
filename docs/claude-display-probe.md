@@ -1,10 +1,24 @@
-# Claude display probe
+# Claude Code display probe
 
-This is a disposable capability probe, not an adapter. Use a temporary Claude configuration directory and a single test session. Do not install a persistent hook, edit an existing hook file, or send a production conversation.
+Claude Code 2.1.211 supports display-only response transformation through `MessageDisplay`. It does not replace the persisted assistant message.
 
-1. Configure a `MessageDisplay` hook that adds a visible marker to one assistant display message.
-2. Run one isolated session that produces a known short response.
-3. Close it, then inspect only that temporary session transcript and configuration.
-4. Remove the temporary directory.
+## Observed behavior
 
-Record whether the marker appeared in the display and whether it appeared in the persisted transcript. If rendering changes but persistence does not, classify the result as display transformation only. If the hook schema or persistence behavior differs from this procedure, do not claim canonical replacement.
+The isolated hook received one JSON object containing `hook_event_name: "MessageDisplay"`, message and turn identifiers, `index`, `final`, and the newly completed text in `delta`. It returned:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "MessageDisplay",
+    "displayContent": "DISPLAY_TRANSFORMED"
+  }
+}
+```
+
+Claude Code printed `DISPLAY_TRANSFORMED`. The temporary session transcript retained the original assistant text and did not contain the replacement marker. This proves display transformation, not canonical transcript replacement.
+
+The probe used a temporary Claude configuration, a trivial response, and no tools. It did not install a persistent hook or inspect a production conversation. Authentication was unavailable in the temporary profile, but the `MessageDisplay` hook still transformed the resulting assistant error message and provided enough evidence to compare display and persistence.
+
+## Support boundary
+
+Speak Human does not ship a Claude Code adapter in V0. A future display adapter could use the shared command-line interface, but it must be labeled display-only. A wrapper that owns `claude -p` output could provide canonical wrapper output without changing Claude Code's interactive transcript.
