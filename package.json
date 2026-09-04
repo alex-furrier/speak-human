@@ -1,0 +1,47 @@
+{
+  "name": "speak-human",
+  "version": "0.1.0",
+  "description": "Bounded final-response rewriting for Pi",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "writing"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "files": [
+    "extensions",
+    "packages",
+    "README.md",
+    "docs",
+    "LICENSE",
+    "SPEC.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/speak-human.ts"
+    ]
+  },
+  "scripts": {
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run format:check && npm test",
+    "pack:check": "npm pack --dry-run",
+    "verify:package": "node scripts/verify-package.mjs",
+    "verify": "npm run check && npm run pack:check && npm run verify:package"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.3",
+    "@types/node": "^24.0.0",
+    "prettier": "^3.5.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  }
+}
