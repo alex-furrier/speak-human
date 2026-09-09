@@ -90,6 +90,7 @@ export function loopbackCompletion(config: LoopbackConfig): Completion {
           ],
           temperature: 0,
           max_tokens: 2048,
+          stop: ["</REWRITE>"],
         }),
       });
       if (!response.ok || !response.body) throw new Error("loopback-failed");

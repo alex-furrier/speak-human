@@ -24,6 +24,11 @@ const run = (mode: string, extras: Partial<CommandConfig> = {}) =>
     allowRemoteSource: true,
     ...extras,
   })(prompt, new AbortController().signal);
+async function requestJson(request: Parameters<RequestListener>[0]) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) chunks.push(Buffer.from(chunk));
+  return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+}
 async function withServer(
   handler: RequestListener,
   runTest: (config: LoopbackConfig) => Promise<void>,
@@ -115,8 +120,10 @@ test("command backend kills descendants with its process group", async () => {
 });
 test("loopback backend accepts exact success metadata and rejects transport failures", async () => {
   await withServer(
-    (request, response) => {
+    async (request, response) => {
       assert.equal(request.url, "/v1/chat/completions");
+      const body = (await requestJson(request)) as { stop?: unknown };
+      assert.deepEqual(body.stop, ["</REWRITE>"]);
       response.end(
         JSON.stringify({
           choices: [{ message: { content: "<NO_CHANGE>" } }],

@@ -121,7 +121,9 @@ function createContext(controls: ContextControls = {}): {
           content: [
             {
               type: "text",
-              text: controls.completionText ?? `<REWRITE>\n${prose}`,
+              text:
+                controls.completionText ??
+                `<REWRITE>\n${prose.replace("long enough", "sufficiently long")}`,
             },
           ],
           usage: {
