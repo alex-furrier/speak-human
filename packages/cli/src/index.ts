@@ -245,7 +245,8 @@ export function commandCompletion(config: CommandConfig): Completion {
         let output = Buffer.alloc(0);
         let settled = false;
         const terminate = async (): Promise<void> => {
-          const alreadyClosed = child.exitCode !== null;
+          const alreadyClosed =
+            child.exitCode !== null || child.signalCode !== null;
           try {
             process.kill(-child.pid!, "SIGKILL");
           } catch {

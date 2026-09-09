@@ -57,6 +57,7 @@ test("command backend rejects malformed UTF-8, overflow, timeout, nonzero, and i
     "overflow",
     "timeout",
     "nonzero",
+    "signal",
     "invalid",
     "invalid-metadata",
     "close-stdin",

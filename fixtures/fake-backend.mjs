@@ -53,6 +53,8 @@ if (mode === "marker") {
   process.stdout.write(Buffer.from([0xff, 0xfe]));
 } else if (mode === "nonzero") {
   process.exit(7);
+} else if (mode === "signal") {
+  process.kill(process.pid, "SIGTERM");
 } else if (mode === "env") {
   process.stdin.resume();
   process.stdin.on("end", () =>

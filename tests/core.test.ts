@@ -43,6 +43,10 @@ test("preservation retains destinations while labels may change", () => {
   );
   for (const [before, after] of [
     ["[guide][doc]\n\n[doc]: guide.md", "[guide][doc]\n\n[doc]: other.md"],
+    [
+      "[guide](https://trusted.example/a_(b)?download=stable)",
+      "[guide](https://trusted.example/a_(b)?download=malware)",
+    ],
     ['<a href="guide.md">guide</a>', '<a href="other.md">guide</a>'],
     ["[[Guide|read this]]", "[[Other Guide|read this]]"],
   ] as const)
@@ -74,6 +78,7 @@ test("preservation retains destinations while labels may change", () => {
       "Run npm run check before release.",
       "Run npm run publish before release.",
     ],
+    ["Use npm test before release.", "Use npm publish before release."],
     ["Execute acme deploy --safe now.", "Execute acme destroy --safe now."],
   ] as const)
     assert.ok(preservationFailures(before, after).includes("commands"));

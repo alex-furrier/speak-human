@@ -184,11 +184,32 @@ function wordSequence(text: string): string[] {
       .match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu) ?? []
   );
 }
+function inlineLinkDestinations(text: string): string[] {
+  const destinations: string[] = [];
+  let opening = text.indexOf("](");
+  while (opening >= 0) {
+    const start = opening + 2;
+    let depth = 1;
+    for (let cursor = start; cursor < text.length; cursor += 1) {
+      if (text[cursor] === "\\") {
+        cursor += 1;
+        continue;
+      }
+      if (text[cursor] === "(") depth += 1;
+      if (text[cursor] !== ")") continue;
+      depth -= 1;
+      if (depth === 0) {
+        destinations.push(text.slice(start, cursor));
+        opening = text.indexOf("](", cursor + 1);
+        break;
+      }
+    }
+    if (depth !== 0) break;
+  }
+  return destinations;
+}
 function linkDestinations(text: string): string[] {
-  const destinations = Array.from(
-    text.matchAll(/\]\(([^)]+)\)/g),
-    (match) => match[1]!,
-  );
+  const destinations = inlineLinkDestinations(text);
   destinations.push(
     ...Array.from(
       text.matchAll(/^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*(?:<([^>\n]+)>|(\S+))/gm),
@@ -226,6 +247,10 @@ function commandInvocations(text: string): string[] {
         /\b(?:run|execute|invoke|type)\s+(?:the\s+command\s+)?((?:\.{0,2}\/|~\/|\/)?[A-Za-z0-9_.-]+(?:\s+[^\n]+)?)/gi,
       ),
       (match) => match[1]!,
+    ),
+    ...matches(
+      text,
+      /\b(?:npm|npx|pnpm|yarn|bun|node|deno|python3?|uv|git|gh|mise|cargo|go|rustc|docker|kubectl|curl|wget|pi|make(?!\s+(?:the|a|an)\b))\s+(?:run\s+)?[A-Za-z0-9_./:@-]+(?:\s+--?[A-Za-z][\w-]*(?:=[^\s,.;:]+)?)?/gi,
     ),
   );
   return commands;
