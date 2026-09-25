@@ -10,7 +10,7 @@ Speak Human is a Pi package that can replace an eligible finalized assistant res
 Pi can install Speak Human from Git or a local checkout. This project isn't published to the npm registry.
 
 ```sh
-pi install git:github.com/safurrier/speak-human
+pi install git:github.com/alex-furrier/speak-human
 ```
 
 For local development:

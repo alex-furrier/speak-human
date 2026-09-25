@@ -226,6 +226,25 @@ function linkDestinations(text: string): string[] {
   );
   return destinations;
 }
+function urls(text: string): string[] {
+  const found: string[] = [];
+  for (const match of text.matchAll(/https?:\/\//g)) {
+    let depth = 0;
+    let end = match.index!;
+    while (end < text.length) {
+      const char = text[end]!;
+      if (/\s|[<>]/.test(char)) break;
+      if (char === "(") depth += 1;
+      if (char === ")") {
+        if (depth === 0) break;
+        depth -= 1;
+      }
+      end += 1;
+    }
+    found.push(text.slice(match.index, end));
+  }
+  return found;
+}
 function paths(text: string): string[] {
   return matches(
     text,
@@ -248,9 +267,11 @@ function commandInvocations(text: string): string[] {
       ),
       (match) => match[1]!,
     ),
+    // Prose has no reliable shell-argument boundary. Protect the whole line
+    // after a tool invocation rather than silently losing a later argument.
     ...matches(
       text,
-      /\b(?:npm|npx|pnpm|yarn|bun|node|deno|python3?|uv|git|gh|mise|cargo|go|rustc|docker|kubectl|curl|wget|pi|make(?!\s+(?:the|a|an)\b))\s+(?:run\s+)?[A-Za-z0-9_./:@-]+(?:\s+--?[A-Za-z][\w-]*(?:=[^\s,.;:]+)?)?/gi,
+      /\b(?:npm|npx|pnpm|yarn|bun|node|deno|python3?|uv|git|gh|mise|cargo|go|rustc|docker|kubectl|curl|wget|pi|make(?!\s+(?:the|a|an)\b))\s+[^\n]+/gi,
     ),
   );
   return commands;
@@ -261,7 +282,7 @@ export function preservationFailures(
 ): string[] {
   const failures: string[] = [];
   const required: readonly [string, (text: string) => string[]][] = [
-    ["urls", (text) => matches(text, /https?:\/\/[^\s)>]+/g)],
+    ["urls", urls],
     ["fenced-code", fenceBlocks],
     ["inline-code", inlineCode],
     ["link-destinations", linkDestinations],

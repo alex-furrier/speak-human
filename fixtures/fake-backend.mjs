@@ -37,6 +37,9 @@ if (mode === "marker") {
   setTimeout(() => {}, 1000);
 } else if (mode === "timeout") {
   setInterval(() => {}, 1000);
+} else if (mode === "linger") {
+  writeFileSync(process.env.PID_FILE, String(process.pid));
+  setInterval(() => {}, 1000);
 } else if (mode === "child") {
   const child = spawn(process.execPath, ["-e", "setInterval(()=>{},1000)"], {
     stdio: "ignore",

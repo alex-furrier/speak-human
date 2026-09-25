@@ -54,6 +54,12 @@ test("preservation retains destinations while labels may change", () => {
       preservationFailures(before, after).includes("link-destinations"),
     );
   assert.ok(
+    preservationFailures(
+      "See https://trusted.example/a_(b)?download=stable for details.",
+      "See https://trusted.example/a_(b)?download=malware for details.",
+    ).includes("urls"),
+  );
+  assert.ok(
     preservationFailures(source, source.replace("1.2.3", "2.0")).includes(
       "numbers",
     ),
@@ -79,6 +85,10 @@ test("preservation retains destinations while labels may change", () => {
       "Run npm run publish before release.",
     ],
     ["Use npm test before release.", "Use npm publish before release."],
+    [
+      "Use git checkout main before release.",
+      "Use git checkout production before release.",
+    ],
     ["Execute acme deploy --safe now.", "Execute acme destroy --safe now."],
   ] as const)
     assert.ok(preservationFailures(before, after).includes("commands"));

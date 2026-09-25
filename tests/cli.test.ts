@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { mkdtemp, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -63,6 +66,60 @@ test("CLI rewrite and doctor use bounded versioned JSON", async () => {
     status: "ok",
     backend: "command",
   });
+});
+
+test("CLI termination aborts and kills a command backend", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "speak-human-signal-"));
+  const pidFile = join(directory, "backend.pid");
+  const child = spawn(process.execPath, ["--import", "tsx", main, "rewrite"], {
+    stdio: ["pipe", "pipe", "pipe"],
+    env: { ...process.env, PID_FILE: pidFile },
+  });
+  let output = "";
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => (output += chunk));
+  child.stdin.end(
+    JSON.stringify({
+      schema_version: 1,
+      text: "A source answer with a pending command backend.",
+      backend: {
+        kind: "command",
+        config: {
+          executable: process.execPath,
+          args: [fake, "linger"],
+          env: ["PID_FILE"],
+          allowRemoteSource: true,
+        },
+      },
+    }),
+  );
+  let pid: number | undefined;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      pid = Number(await readFile(pidFile, "utf8"));
+      break;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  assert.ok(pid, "backend started");
+  child.kill("SIGTERM");
+  const code = await Promise.race([
+    new Promise<number | null>((resolve) => child.once("close", resolve)),
+    new Promise<never>((_resolve, reject) =>
+      setTimeout(
+        () => reject(new Error("CLI did not settle after SIGTERM")),
+        3000,
+      ),
+    ),
+  ]);
+  assert.equal(code, 0);
+  assert.deepEqual(JSON.parse(output), {
+    schema_version: 1,
+    status: "rejected",
+    reason: "aborted",
+  });
+  assert.throws(() => process.kill(pid, 0));
 });
 
 test("CLI rejects malformed, unknown, and oversized input without echoing it", async () => {

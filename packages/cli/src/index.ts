@@ -134,7 +134,7 @@ export function loopbackCompletion(config: LoopbackConfig): Completion {
   };
 }
 type CompletionResponse = {
-  choices: [{ message: { content: string } }];
+  choices: [{ message: { content: string }; finish_reason?: "stop" }];
   model?: string;
   usage?: {
     prompt_tokens?: number;
@@ -149,6 +149,11 @@ function isCompletionResponse(value: unknown): value is CompletionResponse {
   const choice = body.choices[0];
   if (!choice || typeof choice !== "object") return false;
   const message = (choice as { message?: unknown }).message;
+  if (
+    (choice as { finish_reason?: unknown }).finish_reason !== undefined &&
+    (choice as { finish_reason?: unknown }).finish_reason !== "stop"
+  )
+    return false;
   if (
     !message ||
     typeof message !== "object" ||

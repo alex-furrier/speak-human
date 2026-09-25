@@ -173,6 +173,11 @@ test("loopback backend accepts exact success metadata and rejects transport fail
       choices: [{ message: { content: "x" } }],
       usage: { prompt_tokens: -1 },
     }),
+    JSON.stringify({
+      choices: [
+        { finish_reason: "length", message: { content: "<REWRITE>\npartial" } },
+      ],
+    }),
   ])
     await withServer(
       (_request, response) => response.end(body),

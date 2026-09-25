@@ -77,12 +77,17 @@ process.stdin.on("end", async () => {
     }
     if (action !== "rewrite" || typeof body.text !== "string")
       throw new Error("request-invalid");
-    const outcome = await rewrite(
-      body.text,
-      complete,
-      new AbortController().signal,
-    );
-    safeWrite({ schema_version: 1, ...outcome });
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    process.once("SIGINT", abort);
+    process.once("SIGTERM", abort);
+    try {
+      const outcome = await rewrite(body.text, complete, controller.signal);
+      safeWrite({ schema_version: 1, ...outcome });
+    } finally {
+      process.off("SIGINT", abort);
+      process.off("SIGTERM", abort);
+    }
   } catch {
     fail();
   }
