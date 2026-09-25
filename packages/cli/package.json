@@ -1,0 +1,13 @@
+{
+  "name": "@speak-human/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "bin": {
+    "speak-human": "./src/main.ts"
+  },
+  "dependencies": {
+    "@speak-human/core": "file:../core",
+    "tsx": "^4.20.0"
+  }
+}

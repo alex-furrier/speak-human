@@ -1,0 +1,6 @@
+[tasks.test]
+run = "npm test"
+[tasks.check]
+run = "npm run check"
+[tasks.verify]
+run = "npm run verify"
